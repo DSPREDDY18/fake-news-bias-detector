@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.eggs/
+venv/
+env/
+.venv/
+.env
+
+# Node
+node_modules/
+frontend/build/
+frontend/.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite3
+instance/
+
+# Firebase
+firebase-credentials.json
+
+# Reports
+backend/reports/*.pdf
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
