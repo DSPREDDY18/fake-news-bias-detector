@@ -36,7 +36,12 @@ def create_app(config_name: str | None = None) -> Flask:
 
     # ---- Extensions -------------------------------------------------- #
     jwt.init_app(app)
-    cors.init_app(app, resources={r'/api/*': {'origins': '*'}})
+    cors.init_app(app, resources={r'/api/*': {
+        'origins': '*',
+        'methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        'allow_headers': ['Content-Type', 'Authorization'],
+        'supports_credentials': False,
+    }})
 
     # ---- Blueprints -------------------------------------------------- #
     register_blueprints(app)
