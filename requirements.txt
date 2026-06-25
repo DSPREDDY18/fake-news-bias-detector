@@ -7,9 +7,7 @@ Flask-JWT-Extended==4.7.1
 # Database (Firebase)
 firebase-admin>=6.0.0
 
-# AI/NLP
-transformers==4.52.4
-sentence-transformers==4.1.0
+# Lightweight NLP (no heavy ML models)
 scikit-learn==1.6.1
 pandas==2.2.3
 numpy==2.2.6

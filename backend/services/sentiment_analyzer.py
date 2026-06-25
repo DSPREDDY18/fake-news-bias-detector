@@ -17,7 +17,12 @@ class SentimentAnalyzer:
     def __init__(self) -> None:
         self._pipeline: Any = None
         self._pipeline_loaded: bool = False
-        self._load_pipeline()
+        # Skip heavy model loading in production (Render free tier = 512MB)
+        import os
+        if os.getenv('FLASK_ENV') != 'production':
+            self._load_pipeline()
+        else:
+            logger.info('SentimentAnalyzer: skipping transformer in production, using TextBlob fallback.')
 
     def _load_pipeline(self) -> None:
         """Try to load a HuggingFace sentiment-analysis pipeline."""
