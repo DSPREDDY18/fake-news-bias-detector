@@ -5,6 +5,7 @@ using Google Cloud Firestore as the database backend.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import datetime, timezone
@@ -21,29 +22,41 @@ _db = None
 
 
 def get_db():
-    """Get Firestore client, initializing Firebase if needed."""
+    """Get Firestore client, initializing Firebase if needed.
+
+    Supports two credential modes:
+        1. FIREBASE_CREDENTIALS_JSON env var (JSON string — for Render/Cloud)
+        2. FIREBASE_CREDENTIALS_PATH env var or local file (for local dev)
+    """
     global _firebase_app, _db
 
     if _db is not None:
         return _db
 
-    cred_path = os.getenv(
-        'FIREBASE_CREDENTIALS_PATH',
-        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__)
-        ))), 'firebase-credentials.json')
-    )
-
-    if not os.path.exists(cred_path):
-        raise FileNotFoundError(
-            f'Firebase credentials not found at {cred_path}. '
-            'Set FIREBASE_CREDENTIALS_PATH env var or place firebase-credentials.json in project root.'
-        )
-
     if _firebase_app is None:
-        cred = credentials.Certificate(cred_path)
+        # Mode 1: JSON string from env var (for Render / Cloud Run)
+        cred_json = os.getenv('FIREBASE_CREDENTIALS_JSON')
+        if cred_json:
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+            logger.info('Firebase initialized from FIREBASE_CREDENTIALS_JSON env var.')
+        else:
+            # Mode 2: File path (local development)
+            cred_path = os.getenv(
+                'FIREBASE_CREDENTIALS_PATH',
+                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                    os.path.abspath(__file__)
+                ))), 'firebase-credentials.json')
+            )
+            if not os.path.exists(cred_path):
+                raise FileNotFoundError(
+                    f'Firebase credentials not found at {cred_path}. '
+                    'Set FIREBASE_CREDENTIALS_JSON or FIREBASE_CREDENTIALS_PATH env var.'
+                )
+            cred = credentials.Certificate(cred_path)
+            logger.info('Firebase initialized from credentials file.')
+
         _firebase_app = firebase_admin.initialize_app(cred)
-        logger.info('Firebase initialized successfully.')
 
     _db = firestore.client()
     return _db
