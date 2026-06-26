@@ -17,5 +17,5 @@ services:
         generateValue: true
       - key: JWT_SECRET_KEY
         generateValue: true
-      - key: FIREBASE_CREDENTIALS_PATH
-        value: ./firebase-credentials.json
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false

@@ -34,27 +34,41 @@ def get_db():
         return _db
 
     if _firebase_app is None:
-        # Mode 1: JSON string from env var (for Render / Cloud Run)
-        cred_json = os.getenv('FIREBASE_CREDENTIALS_JSON')
-        if cred_json:
-            cred_dict = json.loads(cred_json)
-            cred = credentials.Certificate(cred_dict)
-            logger.info('Firebase initialized from FIREBASE_CREDENTIALS_JSON env var.')
-        else:
-            # Mode 2: File path (local development)
-            cred_path = os.getenv(
-                'FIREBASE_CREDENTIALS_PATH',
-                os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                    os.path.abspath(__file__)
-                ))), 'firebase-credentials.json')
-            )
-            if not os.path.exists(cred_path):
+        # Try both env vars, auto-detect if value is JSON or a file path
+        cred = None
+        for env_key in ('FIREBASE_CREDENTIALS_JSON', 'FIREBASE_CREDENTIALS_PATH', 'GOOGLE_APPLICATION_CREDENTIALS'):
+            val = os.getenv(env_key, '').strip()
+            if not val:
+                continue
+            # If value looks like JSON, parse it directly
+            if val.startswith('{'):
+                try:
+                    cred_dict = json.loads(val)
+                    cred = credentials.Certificate(cred_dict)
+                    logger.info('Firebase initialized from %s env var (JSON).', env_key)
+                    break
+                except (json.JSONDecodeError, ValueError) as exc:
+                    logger.warning('Failed to parse %s as JSON: %s', env_key, exc)
+                    continue
+            # Otherwise treat as file path
+            if os.path.exists(val):
+                cred = credentials.Certificate(val)
+                logger.info('Firebase initialized from %s file: %s', env_key, val)
+                break
+
+        # Fallback: default file path
+        if cred is None:
+            default_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__)
+            ))), 'firebase-credentials.json')
+            if os.path.exists(default_path):
+                cred = credentials.Certificate(default_path)
+                logger.info('Firebase initialized from default path: %s', default_path)
+            else:
                 raise FileNotFoundError(
-                    f'Firebase credentials not found at {cred_path}. '
-                    'Set FIREBASE_CREDENTIALS_JSON or FIREBASE_CREDENTIALS_PATH env var.'
+                    'Firebase credentials not found. Set FIREBASE_CREDENTIALS_JSON env var '
+                    'with the JSON content of your service account key.'
                 )
-            cred = credentials.Certificate(cred_path)
-            logger.info('Firebase initialized from credentials file.')
 
         _firebase_app = firebase_admin.initialize_app(cred)
 
