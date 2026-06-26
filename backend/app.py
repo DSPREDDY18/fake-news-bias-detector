@@ -79,45 +79,37 @@ def create_app(config_name: str | None = None) -> Flask:
     # ---- Debug test route (TEMPORARY) -------------------------------- #
     @app.route('/api/debug/test-analyze', methods=['GET'])
     def debug_test_analyze():
-        import traceback
-        results = {}
-        try:
-            from backend.services.fake_news_detector import FakeNewsDetector
-            fd = FakeNewsDetector()
-            results['fake_news'] = 'OK'
-        except Exception as e:
-            results['fake_news'] = traceback.format_exc()
-        try:
-            from backend.services.bias_detector import BiasDetector
-            bd = BiasDetector()
-            r = bd.analyze('Test news article about politics.')
-            results['bias'] = 'OK'
-        except Exception as e:
-            results['bias'] = traceback.format_exc()
-        try:
-            from backend.services.sentiment_analyzer import SentimentAnalyzer
-            sa = SentimentAnalyzer()
-            results['sentiment'] = 'OK'
-        except Exception as e:
-            results['sentiment'] = traceback.format_exc()
-        try:
-            from backend.services.propaganda_detector import PropagandaDetector
-            pd = PropagandaDetector()
-            results['propaganda'] = 'OK'
-        except Exception as e:
-            results['propaganda'] = traceback.format_exc()
-        try:
-            from backend.services.credibility_scorer import CredibilityScorer
-            cs = CredibilityScorer()
-            results['credibility'] = 'OK'
-        except Exception as e:
-            results['credibility'] = traceback.format_exc()
-        try:
-            from backend.services.gemini_service import GeminiService
-            gs = GeminiService()
-            results['gemini'] = 'OK'
-        except Exception as e:
-            results['gemini'] = traceback.format_exc()
+        import traceback, json as _json
+        text = 'Breaking news Scientists discover water on Mars confirming decades of speculation about the red planet.'
+        results = {'steps': []}
+        def step(name, fn):
+            try:
+                r = fn()
+                results['steps'].append({'step': name, 'status': 'OK', 'result': str(r)[:200]})
+                return r
+            except Exception:
+                results['steps'].append({'step': name, 'status': 'FAIL', 'error': traceback.format_exc()[-500:]})
+                return None
+
+        fd = step('1_import_fake_news', lambda: __import__('backend.services.fake_news_detector', fromlist=['FakeNewsDetector']).FakeNewsDetector())
+        fake_result = step('2_run_fake_news', lambda: fd.analyze(text)) if fd else None
+        bd = step('3_import_bias', lambda: __import__('backend.services.bias_detector', fromlist=['BiasDetector']).BiasDetector())
+        bias_result = step('4_run_bias', lambda: bd.analyze(text)) if bd else None
+        sa = step('5_import_sentiment', lambda: __import__('backend.services.sentiment_analyzer', fromlist=['SentimentAnalyzer']).SentimentAnalyzer())
+        sent_result = step('6_run_sentiment', lambda: sa.analyze(text)) if sa else None
+        ppd = step('7_import_propaganda', lambda: __import__('backend.services.propaganda_detector', fromlist=['PropagandaDetector']).PropagandaDetector())
+        prop_result = step('8_run_propaganda', lambda: ppd.analyze(text)) if ppd else None
+        cs = step('9_import_credibility', lambda: __import__('backend.services.credibility_scorer', fromlist=['CredibilityScorer']).CredibilityScorer())
+        cred_result = step('10_run_credibility', lambda: cs.calculate(fake_result or {}, bias_result or {}, sent_result or {}, prop_result or {}, text)) if cs else None
+        gs = step('11_import_gemini', lambda: __import__('backend.services.gemini_service', fromlist=['GeminiService']).GeminiService())
+        step('12_run_gemini_summary', lambda: gs._fallback_summary(text)) if gs else None
+        step('13_firebase_write', lambda: __import__('backend.services.firebase_service', fromlist=['FirebaseAnalysisService']).FirebaseAnalysisService.create_analysis({
+            'user_id': None, 'article_title': 'Debug Test', 'article_text': text, 'article_url': None,
+            'fake_news_score': 0.5, 'fake_news_label': 'TEST', 'bias_score': 0.0, 'bias_label': 'CENTER',
+            'sentiment_score': 0.0, 'sentiment_label': 'NEUTRAL', 'propaganda_score': 0.0,
+            'propaganda_techniques': '[]', 'credibility_score': 50.0, 'generated_summary': 'test',
+            'gemini_explanation': '{}', 'keywords': '[]',
+        }))
         return results, 200
 
     return app
