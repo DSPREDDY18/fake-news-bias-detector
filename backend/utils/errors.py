@@ -139,9 +139,15 @@ def register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(500)
     def handle_internal_error(error: Any) -> Tuple[Any, int]:
-        app.logger.error('Internal server error: %s', error)
-        return jsonify({
+        import traceback
+        tb = traceback.format_exc()
+        app.logger.error('Internal server error: %s\n%s', error, tb)
+        resp = {
             'error': True,
             'status_code': 500,
             'message': 'Internal server error.',
-        }), 500
+        }
+        # Include traceback in non-production for debugging
+        if app.debug or app.config.get('TESTING'):
+            resp['traceback'] = str(error)
+        return jsonify(resp), 500

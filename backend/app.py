@@ -76,6 +76,50 @@ def create_app(config_name: str | None = None) -> Flask:
     def health_check():
         return {'status': 'ok', 'message': 'Fake News & Bias Detector API is running.', 'database': 'Firebase Firestore'}, 200
 
+    # ---- Debug test route (TEMPORARY) -------------------------------- #
+    @app.route('/api/debug/test-analyze', methods=['GET'])
+    def debug_test_analyze():
+        import traceback
+        results = {}
+        try:
+            from backend.services.fake_news_detector import FakeNewsDetector
+            fd = FakeNewsDetector()
+            results['fake_news'] = 'OK'
+        except Exception as e:
+            results['fake_news'] = traceback.format_exc()
+        try:
+            from backend.services.bias_detector import BiasDetector
+            bd = BiasDetector()
+            r = bd.analyze('Test news article about politics.')
+            results['bias'] = 'OK'
+        except Exception as e:
+            results['bias'] = traceback.format_exc()
+        try:
+            from backend.services.sentiment_analyzer import SentimentAnalyzer
+            sa = SentimentAnalyzer()
+            results['sentiment'] = 'OK'
+        except Exception as e:
+            results['sentiment'] = traceback.format_exc()
+        try:
+            from backend.services.propaganda_detector import PropagandaDetector
+            pd = PropagandaDetector()
+            results['propaganda'] = 'OK'
+        except Exception as e:
+            results['propaganda'] = traceback.format_exc()
+        try:
+            from backend.services.credibility_scorer import CredibilityScorer
+            cs = CredibilityScorer()
+            results['credibility'] = 'OK'
+        except Exception as e:
+            results['credibility'] = traceback.format_exc()
+        try:
+            from backend.services.gemini_service import GeminiService
+            gs = GeminiService()
+            results['gemini'] = 'OK'
+        except Exception as e:
+            results['gemini'] = traceback.format_exc()
+        return results, 200
+
     return app
 
 
